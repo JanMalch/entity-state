@@ -18,6 +18,7 @@ import {
 } from './errors';
 import { IdStrategy } from './id-strategy';
 import { getActive, HashMap } from './internal';
+import { GoToPageAction, SetPageSizeAction } from './actions/pagination';
 import IdGenerator = IdStrategy.IdGenerator;
 
 /**
@@ -30,26 +31,46 @@ export interface EntityStateModel<T> {
   error: Error | undefined;
   active: string | undefined;
   ids: string[];
+  pageSize: number;
+  pageIndex: number;
 }
 
 /**
  * Returns a new object which serves as the default state.
  * No entities, loading is false, error is undefined, active is undefined.
  */
-export function defaultEntityState(): EntityStateModel<any> {
+export function defaultEntityState<T>(
+  defaults: Partial<EntityStateModel<T>> = {}
+): EntityStateModel<T> {
   return {
     entities: {},
     ids: [],
     loading: false,
     error: undefined,
-    active: undefined
+    active: undefined,
+    pageSize: 10,
+    pageIndex: 0,
+    ...defaults
   };
 }
+
+export type DeepReadonly<T> = T extends (infer R)[]
+  ? DeepReadonlyArray<R>
+  : T extends Function
+  ? T
+  : T extends object
+  ? DeepReadonlyObject<T>
+  : T;
+
+// This should be ReadonlyArray but it has implications.
+export interface DeepReadonlyArray<T> extends Array<DeepReadonly<T>> {}
+
+export type DeepReadonlyObject<T> = { readonly [P in keyof T]: DeepReadonly<T[P]> };
 
 export type StateSelector<T> = (state: EntityStateModel<any>) => T;
 
 // @dynamic
-export abstract class EntityState<T> {
+export abstract class EntityState<T extends {}> {
   private readonly idKey: string;
   private readonly storePath: string;
   protected readonly idGenerator: IdGenerator<T>;
@@ -75,7 +96,13 @@ export abstract class EntityState<T> {
       'setError',
       'setActive',
       'clearActive',
-      'reset'
+      'reset',
+      'nextPage',
+      'prevPage',
+      'firstPage',
+      'lastPage',
+      'goToPage',
+      'setPageSize'
     );
   }
 
@@ -95,7 +122,7 @@ export abstract class EntityState<T> {
   return {...current, ...updated};
 }
    */
-  abstract onUpdate(current: Readonly<T>, updated: Partial<T>): T;
+  abstract onUpdate(current: DeepReadonly<T>, updated: DeepReadonly<Partial<T>>): T;
 
   // ------------------- SELECTORS -------------------
 
@@ -159,13 +186,14 @@ export abstract class EntityState<T> {
   /**
    * Returns a selector for paginated entities, sorted by insertion order
    */
-  static paginatedEntities(size: number, page: number): StateSelector<any[]> {
+  static paginatedEntities(): StateSelector<any[]> {
     // tslint:disable-line:member-ordering
     const that = this;
     return state => {
       const subState = elvis(state, that.staticStorePath) as EntityStateModel<any>;
-      return subState.ids
-        .slice(page * size, (page + 1) * size)
+      const { ids, pageIndex, pageSize } = subState;
+      return ids
+        .slice(pageIndex * pageSize, (pageIndex + 1) * pageSize)
         .map(id => subState.entities[id]);
     };
   }
@@ -388,6 +416,39 @@ export abstract class EntityState<T> {
     patchState({ error: payload });
   }
 
+  nextPage({ getState, patchState }: StateContext<EntityStateModel<T>>) {
+    patchState({ pageIndex: getState().pageIndex + 1 });
+  }
+
+  prevPage({ getState, patchState }: StateContext<EntityStateModel<T>>) {
+    patchState({ pageIndex: getState().pageIndex - 1 });
+  }
+
+  firstPage({ getState, patchState }: StateContext<EntityStateModel<T>>) {
+    patchState({ pageIndex: 0 });
+  }
+
+  lastPage({ getState, patchState }: StateContext<EntityStateModel<T>>) {
+    const { entities, pageSize } = getState();
+    const totalSize = Object.keys(entities).length;
+    const index = Math.floor(totalSize / pageSize);
+    patchState({ pageIndex: index });
+  }
+
+  goToPage(
+    { getState, patchState }: StateContext<EntityStateModel<T>>,
+    { payload }: GoToPageAction
+  ) {
+    patchState({ pageIndex: payload });
+  }
+
+  setPageSize(
+    { getState, patchState }: StateContext<EntityStateModel<T>>,
+    { payload }: SetPageSizeAction
+  ) {
+    patchState({ pageSize: payload });
+  }
+
   // ------------------- UTILITY -------------------
 
   /**
@@ -440,7 +501,7 @@ export abstract class EntityState<T> {
     if (current === undefined) {
       throw new UpdateFailedError(new NoSuchEntityError(id));
     }
-    entities[id] = this.onUpdate(current, entity);
+    entities[id] = this.onUpdate(current as any, entity as any);
     return entities;
   }
 
