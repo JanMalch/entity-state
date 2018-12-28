@@ -17,6 +17,9 @@ describe('ID generator', () => {
 
   function getState(): EntityStateModel<Todo> {
     return {
+      pageSize: 5,
+      pageIndex: 0,
+      lastUpdated: new Date(),
       active: undefined,
       error: undefined,
       loading: false,
