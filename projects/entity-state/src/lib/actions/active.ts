@@ -3,17 +3,19 @@ import { Payload, Updater } from './type-alias';
 import { EntityState } from '../entity-state';
 import { Type } from '@angular/core';
 
-export type EntitySetActiveAction = Payload<string>;
+export type EntitySetActivePayload = { id: string } | { prev: true } | { next: true };
+export type EntitySetActiveAction = Payload<EntitySetActivePayload>;
 export type EntityUpdateActiveAction<T> = Payload<Updater<T>>;
 
 export class SetActive {
   /**
    * Generates an action that sets an ID that identifies the active entity
    * @param target The targeted state class
-   * @param id The ID that identifies the active entity
+   * @param payload The payload that identifies the active entity
+   * @see EntitySetActivePayload
    */
-  constructor(target: Type<EntityState<any>>, id: string) {
-    return generateActionObject('setActive', target, id);
+  constructor(target: Type<EntityState<any>>, payload: EntitySetActivePayload) {
+    return generateActionObject('setActive', target, payload);
   }
 }
 
