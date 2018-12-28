@@ -8,7 +8,9 @@ import {
   EntitySetErrorAction,
   EntitySetLoadingAction,
   EntityUpdateAction,
-  EntityUpdateActiveAction
+  EntityUpdateActiveAction,
+  GoToPageAction,
+  SetPageSizeAction
 } from './actions';
 import {
   InvalidIdError,
@@ -18,7 +20,6 @@ import {
 } from './errors';
 import { IdStrategy } from './id-strategy';
 import { getActive, HashMap } from './internal';
-import { GoToPageAction, SetPageSizeAction } from './actions/pagination';
 import IdGenerator = IdStrategy.IdGenerator;
 
 /**
@@ -48,7 +49,7 @@ export function defaultEntityState<T>(
     loading: false,
     error: undefined,
     active: undefined,
-    pageSize: 10,
+    pageSize: 5,
     pageIndex: 0,
     ...defaults
   };
@@ -97,10 +98,6 @@ export abstract class EntityState<T extends {}> {
       'setActive',
       'clearActive',
       'reset',
-      'nextPage',
-      'prevPage',
-      'firstPage',
-      'lastPage',
       'goToPage',
       'setPageSize'
     );
@@ -186,7 +183,7 @@ export abstract class EntityState<T extends {}> {
   /**
    * Returns a selector for paginated entities, sorted by insertion order
    */
-  static paginatedEntities(): StateSelector<any[]> {
+  static get paginatedEntities(): StateSelector<any[]> {
     // tslint:disable-line:member-ordering
     const that = this;
     return state => {
@@ -399,10 +396,18 @@ export abstract class EntityState<T extends {}> {
   }
 
   setActive(
-    { patchState }: StateContext<EntityStateModel<T>>,
+    { getState, patchState }: StateContext<EntityStateModel<T>>,
     { payload }: EntitySetActiveAction
   ) {
-    patchState({ active: payload });
+    if ('id' in payload) {
+      patchState({ active: payload.id });
+    } else {
+      const step = payload['prev'] ? -1 : 1;
+      const { active, ids } = getState();
+      let index = ids.findIndex(id => id === active) + step;
+      index = Math.max(0, Math.min(ids.length - 1, index));
+      patchState({ active: ids[index] });
+    }
   }
 
   clearActive({ patchState }: StateContext<EntityStateModel<T>>) {
@@ -416,30 +421,24 @@ export abstract class EntityState<T extends {}> {
     patchState({ error: payload });
   }
 
-  nextPage({ getState, patchState }: StateContext<EntityStateModel<T>>) {
-    patchState({ pageIndex: getState().pageIndex + 1 });
-  }
-
-  prevPage({ getState, patchState }: StateContext<EntityStateModel<T>>) {
-    patchState({ pageIndex: getState().pageIndex - 1 });
-  }
-
-  firstPage({ getState, patchState }: StateContext<EntityStateModel<T>>) {
-    patchState({ pageIndex: 0 });
-  }
-
-  lastPage({ getState, patchState }: StateContext<EntityStateModel<T>>) {
-    const { entities, pageSize } = getState();
-    const totalSize = Object.keys(entities).length;
-    const index = Math.floor(totalSize / pageSize);
-    patchState({ pageIndex: index });
-  }
-
   goToPage(
     { getState, patchState }: StateContext<EntityStateModel<T>>,
     { payload }: GoToPageAction
   ) {
-    patchState({ pageIndex: payload });
+    if (payload['next']) {
+      patchState({ pageIndex: getState().pageIndex + 1 });
+    } else if (payload['prev']) {
+      patchState({ pageIndex: getState().pageIndex - 1 });
+    } else if (payload['first']) {
+      patchState({ pageIndex: 0 });
+    } else if (payload['last']) {
+      const { entities, pageSize } = getState();
+      const totalSize = Object.keys(entities).length;
+      const index = Math.floor(totalSize / pageSize);
+      patchState({ pageIndex: index });
+    } else {
+      patchState({ pageIndex: payload['page'] });
+    }
   }
 
   setPageSize(

@@ -4,12 +4,14 @@ import {
   Add,
   ClearActive,
   CreateOrReplace,
+  GoToPage,
   Remove,
   RemoveActive,
   Reset,
   SetActive,
   SetError,
   SetLoading,
+  SetPageSize,
   Update,
   UpdateActive
 } from 'entity-state';
@@ -102,7 +104,7 @@ export class AppComponent {
   }
 
   open(title: string) {
-    this.store.dispatch(new SetActive(TodoState, title));
+    this.store.dispatch(new SetActive(TodoState, { id: title }));
   }
 
   removeFirstThree(toDos: ToDo[]) {
@@ -137,6 +139,14 @@ export class AppComponent {
         { done: true }
       )
     );
+  }
+
+  prevActive() {
+    this.store.dispatch(new SetActive(TodoState, { prev: true }));
+  }
+
+  nextActive() {
+    this.store.dispatch(new SetActive(TodoState, { next: true }));
   }
 
   // --------- for tests ---------
@@ -192,7 +202,8 @@ export class AppComponent {
   }
 
   getPaginatedEntities(size: number, page: number): ToDo[] {
-    return this.store.selectSnapshot(TodoState.paginatedEntities(size, page));
+    this.store.dispatch([new SetPageSize(TodoState, size), new GoToPage(TodoState, { page })]);
+    return this.store.selectSnapshot(TodoState.paginatedEntities);
   }
 
   getNthEntity(index: number): ToDo {

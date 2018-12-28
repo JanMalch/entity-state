@@ -30,6 +30,7 @@
   *ngIf="(active$ | async) as active"
   style="margin: 16px; border: 1px solid; border-radius: 3px; padding: 16px;"
 >
+  <button (click)="prevActive()">< Prev</button> <button (click)="nextActive()">Next ></button>
   <h3>{{ active.title }} ({{ active.done ? '' : 'not ' }}done)</h3>
   <p>{{ active.description }}</p>
   <button (click)="setDoneActive()">Done</button>
