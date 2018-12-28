@@ -262,6 +262,42 @@ export abstract class EntityState<T extends {}> {
     };
   }
 
+  /**
+   * Returns a selector, indicating if the given ID is present
+   */
+  static idExists(id: string): StateSelector<boolean> {
+    // tslint:disable-line:member-ordering
+    const that = this;
+    return state => {
+      const subState = elvis(state, that.staticStorePath) as EntityStateModel<any>;
+      return subState.ids.includes(id);
+    };
+  }
+
+  /**
+   * Returns a selector, indicating if an entity is active
+   */
+  static get hasActiveEntity(): StateSelector<boolean> {
+    // tslint:disable-line:member-ordering
+    const that = this;
+    return state => {
+      const subState = elvis(state, that.staticStorePath) as EntityStateModel<any>;
+      return subState.active !== undefined;
+    };
+  }
+
+  /**
+   * Returns a selector, indicating if there any entities present
+   */
+  static get isEmpty(): StateSelector<boolean> {
+    // tslint:disable-line:member-ordering
+    const that = this;
+    return state => {
+      const subState = elvis(state, that.staticStorePath) as EntityStateModel<any>;
+      return subState.ids.length === 0;
+    };
+  }
+
   // ------------------- ACTION HANDLERS -------------------
 
   /**
