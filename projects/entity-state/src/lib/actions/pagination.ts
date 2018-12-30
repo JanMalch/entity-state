@@ -5,17 +5,17 @@ import { generateActionObject } from '../internal';
 
 export type GoToPagePayload =
   | { page: number }
-  | { next: true }
-  | { prev: true }
+  | { next: true; wrap?: boolean }
+  | { prev: true; wrap?: boolean }
   | { last: true }
   | { first: true };
-export type GoToPageAction = Payload<GoToPagePayload>;
+export type GoToPageAction = Payload<GoToPagePayload & { wrap: boolean }>;
 
 export class GoToPage {
   /**
    */
   constructor(target: Type<EntityState<any>>, payload: GoToPagePayload) {
-    return generateActionObject('goToPage', target, payload);
+    return generateActionObject('goToPage', target, { wrap: false, ...payload });
   }
 }
 

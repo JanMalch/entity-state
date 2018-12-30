@@ -3,7 +3,10 @@ import { Payload, Updater } from './type-alias';
 import { EntityState } from '../entity-state';
 import { Type } from '@angular/core';
 
-export type EntitySetActivePayload = { id: string } | { prev: true } | { next: true };
+export type EntitySetActivePayload =
+  | { id: string }
+  | { prev: true; wrap?: boolean }
+  | { next: true; wrap?: boolean };
 export type EntitySetActiveAction = Payload<EntitySetActivePayload>;
 export type EntityUpdateActiveAction<T> = Payload<Updater<T>>;
 
@@ -15,7 +18,7 @@ export class SetActive {
    * @see EntitySetActivePayload
    */
   constructor(target: Type<EntityState<any>>, payload: EntitySetActivePayload) {
-    return generateActionObject('setActive', target, payload);
+    return generateActionObject('setActive', target, { wrap: false, ...payload });
   }
 }
 
