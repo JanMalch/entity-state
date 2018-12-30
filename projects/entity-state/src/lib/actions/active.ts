@@ -7,7 +7,7 @@ export type EntitySetActivePayload =
   | { id: string }
   | { prev: true; wrap?: boolean }
   | { next: true; wrap?: boolean };
-export type EntitySetActiveAction = Payload<EntitySetActivePayload>;
+export type EntitySetActiveAction = Payload<EntitySetActivePayload & { wrap: boolean }>;
 export type EntityUpdateActiveAction<T> = Payload<Updater<T>>;
 
 export class SetActive {
