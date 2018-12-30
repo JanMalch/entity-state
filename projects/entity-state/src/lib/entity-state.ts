@@ -458,17 +458,14 @@ export abstract class EntityState<T extends {}> {
     { getState, patchState }: StateContext<EntityStateModel<T>>,
     { payload }: EntitySetActiveAction
   ) {
-    console.log('"id" in payload:', 'id' in payload);
     if ('id' in payload) {
       patchState({ active: payload.id });
     } else {
       const step = payload['prev'] ? -1 : 1;
       const { active, ids } = getState();
       let index = ids.findIndex(id => id === active) + step;
-      console.log('index, step, active:', index, step, active);
       const maxIndex = ids.length - 1;
       index = wrapOrClamp(payload.wrap, index, 0, maxIndex);
-      console.log('index:', index, ids[index]);
       patchState({ active: ids[index] });
     }
   }
